@@ -20,19 +20,18 @@ jobs:
         with:
           ref: main
 
-      # Checkout PR's REPOSITORIES.md to see what changes are proposed
-      - name: Checkout PR REPOSITORIES.md
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          sparse-checkout: |
-            REPOSITORIES.md
-          sparse-checkout-cone-mode: false
-          path: pr-files
-
-      # Copy PR's REPOSITORIES.md to working directory
+      # Fetch only the PR's REPOSITORIES.md (data, never executed) through the
+      # API. actions/checkout refuses to check out fork PR code in
+      # pull_request_target workflows since v4.4.0, which failed this check
+      # for every fork PR.
       - name: Use PR's REPOSITORIES.md
-        run: cp pr-files/REPOSITORIES.md REPOSITORIES.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          gh api "repos/$HEAD_REPO/contents/REPOSITORIES.md?ref=$HEAD_SHA" \
+            -H "Accept: application/vnd.github.raw" > REPOSITORIES.md
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
